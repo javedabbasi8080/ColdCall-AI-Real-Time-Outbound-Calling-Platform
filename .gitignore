@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build / Nest / Next
+dist/
+build/
+coverage/
+frontend/.next/
+frontend/out/
+/tmp
+.temp
+.tmp
+
+# Env & secrets — never commit
+.env
+.env.*
+.env.development
+.env.test
+.env.production
+!.env.example
+frontend/.env.local
+frontend/.env*.local
+!**/.env.example
+!frontend/.env.local.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Misc
+*.tsbuildinfo
+frontend/next-env.d.ts
+tmp-*
+*.mp3

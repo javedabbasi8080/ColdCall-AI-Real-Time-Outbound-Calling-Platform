@@ -1,0 +1,231 @@
+/**
+ * Convert Roman Urdu → Urdu (Nastaliq) for TTS accent.
+ * Proper nouns / project English names kept Latin where clearer on phone.
+ * Conversation logs stay Roman; only the speech path uses this.
+ */
+
+const PHRASES: Array<[RegExp, string]> = [
+  [/assalam\s*o\s*alaikum/gi, 'السلام علیکم'],
+  [/allah\s*hafiz/gi, 'اللہ حافظ'],
+  [/insha\s*allah/gi, 'ان شاء اللہ'],
+  [/umeed hai aap khairiyat se honge/gi, 'امید ہے آپ خیریت سے ہوں گے'],
+  [/agar aap ke paas do minute hon/gi, 'اگر آپ کے پاس دو منٹ ہوں'],
+  [/ek choti si baat karni thi/gi, 'ایک چھوٹی سی بات کرنی تھی'],
+  [/bol rahi hoon/gi, 'بول رہی ہوں'],
+  [/bol raha hoon/gi, 'بول رہا ہوں'],
+  [/bhej rahi hoon/gi, 'بھیج رہی ہوں'],
+  [/bhej raha hoon/gi, 'بھیج رہا ہوں'],
+  [/kar deti hoon/gi, 'کر دیتی ہوں'],
+  [/kar deta hoon/gi, 'کر دیتا ہوں'],
+  [/ayesha/gi, 'عائشہ'],
+  [/ahmed/gi, 'احمد'],
+  [/family ke liye/gi, 'فیملی کے لیے'],
+  [/investment ke liye/gi, 'انویسٹمنٹ کے لیے'],
+  [/dekh rahe hain/gi, 'دیکھ رہے ہیں'],
+  [/budget range/gi, 'بجٹ رینج'],
+  [/site visit/gi, 'سائٹ وزٹ'],
+  [/square yards?/gi, 'اسکوائر یارڈز'],
+  [/whatsapp/gi, 'واٹس ایپ'],
+  [/\bok\b/gi, 'اوکے'],
+  [/hampstead\s*villas?/gi, 'ہیمپسٹیڈ ولاز'],
+  [/dha\s*city\s*karachi/gi, 'ڈی ایچ اے سٹی کراچی'],
+  [/dha city/gi, 'ڈی ایچ اے سٹی'],
+  [/\bd\s*h\s*a\b/gi, 'ڈی ایچ اے'],
+  [/karachi/gi, 'کراچی'],
+  [/pakistan/gi, 'پاکستان'],
+  [/koi baat nahi/gi, 'کوئی بات نہیں'],
+  [/bohat acha/gi, 'بہت اچھا'],
+  [/samajh gaya/gi, 'سمجھ گیا'],
+  [/theek hai/gi, 'ٹھیک ہے'],
+];
+
+const WORDS: Record<string, string> = {
+  main: 'میں',
+  mein: 'میں',
+  se: 'سے',
+  ki: 'کی',
+  ke: 'کے',
+  ka: 'کا',
+  ko: 'کو',
+  mein_n: 'میں',
+  aap: 'آپ',
+  aapke: 'آپ کے',
+  sahab: 'صاحب',
+  jee: 'جی',
+  ji: 'جی',
+  bilkul: 'بالکل',
+  zaroor: 'ضرور',
+  shukriya: 'شکریہ',
+  meherbani: 'مہربانی',
+  khairiyat: 'خیریت',
+  umeed: 'امید',
+  hai: 'ہے',
+  hain: 'ہیں',
+  hoon: 'ہوں',
+  ho: 'ہو',
+  honge: 'ہوں گے',
+  hon: 'ہوں',
+  paas: 'پاس',
+  do: 'دو',
+  minute: 'منٹ',
+  baat: 'بات',
+  karni: 'کرنی',
+  thi: 'تھی',
+  tha: 'تھا',
+  the: 'تھے',
+  bataiye: 'بتائیے',
+  boliye: 'بولیے',
+  batao: 'بتاؤ',
+  kya: 'کیا',
+  ya: 'یا',
+  aur: 'اور',
+  to: 'تو',
+  ek: 'ایک',
+  choti: 'چھوٹی',
+  si: 'سی',
+  agar: 'اگر',
+  nahi: 'نہیں',
+  haan: 'ہاں',
+  han: 'ہاں',
+  okay: 'اوکے',
+  ok: 'اوکے',
+  yes: 'ہاں',
+  plot: 'پلاٹ',
+  plots: 'پلاٹس',
+  villa: 'ولا',
+  villas: 'ولاز',
+  family: 'فیملی',
+  investment: 'انویسٹمنٹ',
+  budget: 'بجٹ',
+  range: 'رینج',
+  size: 'سائز',
+  options: 'آپشنز',
+  available: 'دستیاب',
+  visit: 'وزٹ',
+  viewing: 'ویونگ',
+  subah: 'صبح',
+  sham: 'شام',
+  kab: 'کب',
+  schedule: 'شیڈول',
+  karein: 'کریں',
+  denge: 'دیں گے',
+  bhej: 'بھیج',
+  raha: 'رہا',
+  rahi: 'رہی',
+  rahe: 'رہے',
+  details: 'ڈیٹیلز',
+  confirm: 'کنفرم',
+  perfect: 'پرفیکٹ',
+  matching: 'میچنگ',
+  bas: 'بس',
+  yeh: 'یہ',
+  maloom: 'معلوم',
+  karna: 'کرنا',
+  tha2: 'تھا',
+  company: 'کمپنی',
+  project: 'پروجیکٹ',
+  real: 'ریل',
+  estate: 'اسٹیٹ',
+  consultant: 'کنسلٹنٹ',
+  ayesha: 'عائشہ',
+  ahmed: 'احمد',
+  javed: 'جاوید',
+  ali: 'علی',
+  usman: 'عثمان',
+  bilal: 'بلال',
+  hamza: 'حمزہ',
+  sara: 'سارہ',
+  fatima: 'فاطمہ',
+  aapka: 'آپ کا',
+  aapki: 'آپ کی',
+  aapko: 'آپ کو',
+  please: 'مہربانی',
+  thank: 'شکریہ',
+  thanks: 'شکریہ',
+  hello: 'السلام علیکم',
+  hi: 'السلام علیکم',
+  morning: 'صبح',
+  evening: 'شام',
+  afternoon: 'دوپہر',
+  weekend: 'ویک اینڈ',
+  tomorrow: 'کل',
+  today: 'آج',
+  free: 'فارغ',
+  interested: 'دلچسپی',
+  property: 'پراپرٹی',
+  properties: 'پراپرٹیز',
+  luxury: 'لگژری',
+  residential: 'رہائشی',
+  installment: 'اقساط',
+  payment: 'پیمنٹ',
+  plan: 'پلان',
+  plans: 'پلانز',
+  brochure: 'بروشر',
+  pin: 'پن',
+  location: 'لوکیشن',
+  city: 'سٹی',
+  dha: 'ڈی ایچ اے',
+  hampstead: 'ہیمپسٹیڈ',
+  busy: 'بزی',
+  call: 'کال',
+  karun: 'کروں',
+  aaj: 'آج',
+  kal: 'کل',
+  weekday: 'ویک ڈے',
+  bohat: 'بہت',
+  acha: 'اچھا',
+  accha: 'اچھا',
+  time: 'وقت',
+  dene: 'دینے',
+  madad: 'مدد',
+  kaise: 'کیسے',
+  apni: 'اپنی',
+  apna: 'اپنا',
+  liye: 'لیے',
+  hisaab: 'حساب',
+  kis: 'کس',
+  roughly: 'تقریباً',
+  kitne: 'کتنے',
+  us: 'اس',
+  pe: 'پے',
+  foran: 'فوراً',
+  lekin: 'لیکن',
+  zaroori: 'ضروری',
+  chahiye: 'چاہیے',
+  dekhna: 'دیکھنا',
+  chahte: 'چاہتے',
+};
+
+/** Detect if text is already largely Urdu script. */
+export function isMostlyUrduScript(text: string): boolean {
+  const urdu = (text.match(/[\u0600-\u06FF]/g) || []).length;
+  const latin = (text.match(/[A-Za-z]/g) || []).length;
+  return urdu > latin && urdu > 3;
+}
+
+/**
+ * Prepare text for Pakistani Urdu TTS (Nastaliq + keep brand Latin if short).
+ */
+export function toPakistaniUrduTts(romanOrMixed: string): string {
+  let t = (romanOrMixed || '').replace(/\s+/g, ' ').trim();
+  if (!t) return t;
+  if (isMostlyUrduScript(t)) return t;
+
+  for (const [re, ur] of PHRASES) {
+    t = t.replace(re, ur);
+  }
+
+  t = t
+    .split(/(\s+|[,.?؟!،]+)/)
+    .map((tok) => {
+      if (!tok || /^\s+$/.test(tok) || /^[,.?؟!،]+$/.test(tok)) return tok;
+      // Keep obvious English brands / numbers
+      if (/^\d+(\.\d+)?$/.test(tok)) return tok;
+      const key = tok.toLowerCase().replace(/[^\w']/g, '');
+      if (WORDS[key]) return WORDS[key];
+      return tok;
+    })
+    .join('');
+
+  return t.replace(/\s{2,}/g, ' ').trim();
+}
